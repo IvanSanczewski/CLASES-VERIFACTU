@@ -78,7 +78,7 @@
                 "ca": "",
                 "qs": [],
                 "url": "https://user-api.simplybook.me/login",
-                "data": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"getUserToken\",\n  \"params\": [\n    \"t***y\",\n    \"i**i@.com\",\n    \"PSWD\"\n  ],\n  \"id\": 1\n}",
+                "data": "{\n  \"jsonrpc\": \"2.0\",\n  \"method\": \"getUserToken\",\n  \"params\": [\n    \"t***y\",\n    \"i**i@.com\",\n    \"P**D\"\n  ],\n  \"id\": 1\n}",
                 "gzip": true,
                 "method": "post",
                 "headers": [

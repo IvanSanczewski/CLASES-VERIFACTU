@@ -21,7 +21,7 @@ h1 {
   gap: 1em;
 }
 
-.lessons div {
+.lessons>div {
   flex: 1;
   min-height: 100px;
 
