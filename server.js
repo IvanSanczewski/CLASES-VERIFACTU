@@ -265,7 +265,6 @@ app.post('/webhook', async (req, res) => {
 });
 
 
-
 app.get('/api/last-processed-data', (req, res) =>{
   if (lastProcessedData){
     res.status(200).json(lastProcessedData);
@@ -288,7 +287,7 @@ app.get('/api/invoices', async (req, res) => {
 
     res.status(200).json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch invoices' });
+    res.status(500).json({ error: 'Failed to fetch' });
   }
 });
 

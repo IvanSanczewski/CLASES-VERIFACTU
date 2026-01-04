@@ -98,3 +98,80 @@ Aunque este archivo es del servidor, es útil entender cómo interactuaba el fro
     5. Dentro de cada fila, crea las celdas (`<td>`) correspondientes para el nombre del cliente, email, servicio, importe y fecha.
     6. Finalmente, añade cada fila a la tabla, mostrando así un historial completo y dinámico de facturas.
   - **Ventaja:** Proporciona una vista completa de todos los datos, no solo del último elemento.
+
+> ok, I need guidance with it. Do I have to create another app.get or modify the one existing? I have
+> duplicated the original app.get but I understand that the url for the call needs to be formatted
+> diferently. I guess it will still be asyncronous. I have no idea about the supabase methods. Also,
+> we ordered the original one according to booking_time, but since we sort the array in main.js, do we
+> need it here?
+
+✦ You're asking all the right questions. Let's tackle them one by one.
+
+1. One app.get or Two?
+
+You only need to modify the one that already exists.
+
+An Express route like app.get('/api/invoices', ...) will handle requests for both /api/invoices
+(with no filter) and /api/invoices?startSearch=...&endSearch=... (with the filter). You don't need a
+separate one. The logic to handle both cases will go inside this single function.
+
+2. How to Handle Both Cases?
+
+Inside your app.get, you'll check if the filter parameters exist on the request. Express makes this
+easy: the query parameters are available in the req.query object.
+
+    1 app.get('/api/invoices', async (req, res) => {
+    2   // Extract the dates from the URL's query string
+    3   const { startSearch, endSearch } = req.query;
+    4
+    5   if (startSearch && endSearch) {
+    6     // TODO: Run a query with a date filter
+    7     console.log('Filtering between', startSearch, 'and', endSearch);
+    8   } else {
+    9     // This is the original logic: run a query to get ALL invoices
+
+10 }
+11
+12 // ...
+13 });
+
+3. Supabase Filtering Methods
+
+You are correct, the function remains asynchronous because you're still talking to a database.
+
+You don't build the filter into the URL. Instead, you build the query using Supabase's methods. The
+two you need are:
+
+- .gte('column_name', value): "greater than or equal to"
+- .lte('column_name', value): "less than or equal to"
+
+You can chain these methods to build your query. Here's the concept:
+
+    1 // Inside the if (startSearch && endSearch) block
+    2
+    3 // 1. Start with your base query
+    4 let query = supabase.from('invoices').select('*');
+    5
+    6 // 2. Add the date filters
+    7 query = query.gte('booking_time', startSearch); // Filter for dates AFTER startSearch
+    8 query = query.lte('booking_time', endSearch);   // Filter for dates BEFORE endSearch
+    9
+
+10 // 3. Now, execute the fully built query
+11 const { data, error } = await query;
+
+How would you integrate this logic into your existing app.get to handle both the filtered and
+non-filtered cases?
+
+4. To Sort on the Server or Client?
+
+This is an excellent question about performance and best practices.
+
+Answer: It's generally better to sort on the database server (.order() in Supabase).
+
+Why? The database is highly optimized for operations like sorting. By doing it on the server, you
+ensure the data arrives on the client already in the correct order. While sorting on the client
+works fine for small amounts of data, it can become slow if you have thousands of invoices.
+
+Since your server already sorts the data correctly, you can safely remove the invoices.sort(...)
+line from main.js. It's redundant.

@@ -11,7 +11,11 @@ h1 {
 
 .container {
   margin: 0 auto;
-  max-width: 80vw;
+  max-width: 95vw;
+}
+
+th {
+  width: 500px;
 }
 
 .lessons {

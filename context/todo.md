@@ -21,22 +21,36 @@ However, for future growth, it is a very good idea. As we add more features (lik
 - Reusability: We could reuse the createInvoicesFromBooking function elsewhere if needed.
 - Testability: It is much easier to write automated tests for a standalone service function than for an entire Express endpoint.
 
-Recommendation: Let's proceed with Task 3 for now. When we start refactoring the frontend (Task 4), it would be a perfect time to also refactor the backend logic into a dedicated service layer.
+### Note on Code Cleanup
 
-Shall we begin Task 3: Create a new API endpoint to fetch a list of all invoices?
-╭────────────────────────────╮
-│✓ WriteTodos Set 5 todo(s) │
-│ │
-╰────────────────────────────╯
-✦ Yes, let's begin Task 3.
+During the implementation of steps 3 and 4, some parts of `server.js` became obsolete. Specifically:
 
-The goal is to create a new endpoint, /api/invoices, that will fetch all invoice records directly from your
-Supabase database. This will replace the old endpoint that only returned the single last-processed item from
-memory.
+- The `lastProcessedData` global variable, which was used to store the last invoice in memory.
+- The `/api/last-processed-data` endpoint, which served this single invoice to the frontend.
+  This functionality was entirely replaced by the `/api/invoices` endpoint that fetches all data from the database. These obsolete parts were removed to keep the code clean and maintainable.
 
-I will now modify server.js to add this new endpoint. The endpoint will:
+---
 
-1. Receive a GET request at /api/invoices.
-2. Query the Supabase invoices table for all records.
-3. Order the results to show the newest invoices first.
-4. Return the list of invoices as a JSON response.
+### STEP 5: Implementation Plan for Date Filtering
+
+The final step is to allow users to filter the invoices by a date range.
+
+**What we will build:**
+A user interface with "Start Date" and "End Date" inputs and a "Filter" button. When the button is clicked, the invoice list will update to show only the records from the selected period.
+
+**How we will implement it:**
+
+1.  **Frontend Changes (`index.html` & `script/main.js`):**
+
+    - **Add UI Controls (`index.html`):** We will insert two `<input type="date">` fields and a `<button>` just above the invoices table.
+    - **Handle User Input (`script/main.js`):** An event listener will be attached to the button. On click, it will read the date values.
+    - **Modify API Call (`script/main.js`):** The `fetchAndDisplayInvoices` function will be updated to accept the start and end dates. It will then pass these dates as query parameters in the GET request to the server (e.g., `/api/invoices?startDate=2025-01-01&endDate=2025-01-31`).
+
+2.  **Backend Changes (`server.js`):**
+    - **Enhance API Endpoint (`/api/invoices`):** The endpoint will be modified to check for `startDate` and `endDate` in the request's query parameters (`req.query`).
+    - **Dynamic Database Query:** If dates are provided, we will add filters to the Supabase query. We'll use `.gte('booking_time', startDate)` for the start date (greater than or equal to) and `.lte('booking_time', endDate)` for the end date (less than or equal to).
+    - **Default Behavior:** If no dates are sent in the request, the endpoint will return all invoices, just as it does now.
+
+### `is fetchAndDisplayInvoices() fetching and displaying? shouldn't we separate it?`
+
+<span style="color:lightgreen ;">[PENDING]</span> Implement frontend controls and backend logic

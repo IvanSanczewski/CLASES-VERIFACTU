@@ -10,14 +10,20 @@
   <h1>FACTURAS GENERADAS A TRAVÉS DE SB.ME</h1>
   
   <div class="container">
+    <form class="filters">
+      <input type="date" name="start">
+      <input type="date" name="end">
+      <button>Buscar</button>
+    </form>
     <table class="facturas-table">
       <thead>
         <tr>
+          <th class="res">Reservado</th>
           <th>Nombre Cliente</th>
           <th>Email</th>
           <th>Servicio</th>
           <th>Importe</th>
-          <th>Fecha Reserva</th>
+          <th>Fecha Clase</th>
         </tr>
       </thead>
       <tbody id="facturas-body">
