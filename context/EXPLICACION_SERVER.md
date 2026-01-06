@@ -169,9 +169,56 @@ This is an excellent question about performance and best practices.
 
 Answer: It's generally better to sort on the database server (.order() in Supabase).
 
-Why? The database is highly optimized for operations like sorting. By doing it on the server, you
-ensure the data arrives on the client already in the correct order. While sorting on the client
-works fine for small amounts of data, it can become slow if you have thousands of invoices.
+Why? The database is highly optimized for operations like sorting. By doing it on the server, you ensure the data arrives on the client already in the correct order. While sorting on the client works fine for small amounts of data, it can become slow if you have thousands of invoices.
 
 Since your server already sorts the data correctly, you can safely remove the invoices.sort(...)
 line from main.js. It's redundant.
+
+1.  The Supabase Query
+    The const { data, error } = await supabase... block is how you interact with the database. Every Supabase client query returns an object that contains two possible keys:
+    data (if the query was successful) or error (if it failed). We await the result since it's an asynchronous operation.
+
+2.  Date Filters: `.gte()` and `.lte()`
+    This is the core of the filtering logic. We chain these methods onto our select query.
+
+    - .gte('booking_time', startSearch): gte stands for Greater Than or Equal to. This tells Supabase to only find records where the value in the booking_time column is on or after the startSearch date you provided.
+    - .lte('booking_time', endSearch): lte stands for Less Than or Equal to. This further filters the results, ensuring the booking_time is also on or before the endSearch date.
+
+3.  Error Check: `if (error)`
+    After the query is complete, we immediately check if the error object returned by Supabase has anything in it. If it does, it means the database query itself failed. We then throw error;, which immediately stops the execution of the try block and jumps to the catch block.
+
+4.  Success Response: `res.status(200).json(data)`
+    If the error object is empty, it means the query was successful and data contains our filtered list of invoices. This line sends that data back to the browser with a "200 OK" status, where main.js will receive it.
+
+5.  The `catch` block
+    If any error is thrown within the try block (either from our throw error line or from another unexpected failure), the catch block is executed. It does two things:
+
+    - console.error(...): It logs the detailed error to your server's console. This is crucial for you to see what went wrong during development.
+    - res.status(500).json(...): It sends a generic "500 Internal Server Error" response to the browser. This prevents sensitive error details from being exposed to the end-user and tells main.js that the request failed.
+
+### Last qstn in previous conversation
+
+> I see, but I even was planning to delete that raw_data col
+
+✦ Okay, that's a critical piece of information. Thank you for telling me.
+
+If you delete the raw_data column, my previous solution of peeking inside it for the booking_hash will no longer work.
+
+In that case, your initial assumption was correct: we will need to add a new column to your table.
+
+This is a good database practice. Instead of storing a large, raw JSON object, you store only the specific, important
+fields you need.
+
+Here is the new plan:
+
+1.  Your Task: You will need to go into your Supabase project dashboard, select the invoices table, and add a new
+    column. I recommend naming it booking_hash and setting its type to text. I cannot do this step for you.
+
+2.  My Task: Once you have added that column, I will modify server.js to:
+    - Save the booking_hash from SimplyBook into your new booking_hash column.
+    - Check for duplicates by querying this new, dedicated column, which is much more efficient than searching inside
+      a JSON field.
+
+This approach aligns with your goal of cleaning up the table and is a more robust, long-term solution.
+
+Let me know when you have added the booking_hash column, and I will proceed with the necessary code changes.

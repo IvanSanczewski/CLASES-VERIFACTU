@@ -29,19 +29,23 @@ async function fetchInvoices(startDateSearch, endDateSearch){
     console.log('YES PARAMS');
  
     const searchParams = new URLSearchParams({
-      startSearch: startDateSearch,
+      startSearch: startDateSearch, 
       endSearch: endDateSearch
     });
 
-    const query = searchParams.toString();
-  
+    const query = searchParams.toString(); 
+    console.log(query);
+    console.log(`${url}?${query}`);
+
     try {
       const response = await fetch(`${url}?${query}`);
+      console.log('FULL URL QUERY:', response);
       if (!response.ok) {
         throw new Error('HTTP error! Status:', response.status);
       }
 
-      console.log('RESPONSE:', await response.json());
+      return await response.json();
+
     } catch (error) {
       console.error(error);
       throw error;
@@ -115,16 +119,34 @@ document.addEventListener('DOMContentLoaded', async() => {
   }
 });
 
-// Cuando el usuario hace click en el botón del formulario el evento se dispara
-document.querySelector('.filters').addEventListener('submit', (event)=>{
+// Cuando el usuario hace click en Buscar el evento se dispara
+document.querySelector('.filters').addEventListener('submit', async (event)=>{ // Added async
   event.preventDefault()
 
   // Leémos los valores de las fechas para la búsqueda introducidas por el usuario
   const startSearch = document.querySelector('input[name="start"]').value;
   const endSearch = document.querySelector('input[name="end"]').value;
   
-  fetchInvoices(startSearch, endSearch)
+  try {
+    const invoices = await fetchInvoices(startSearch, endSearch);
+    invoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort invoices
+    console.log('FILTERED INVOICES:', invoices);
+    displayInvoices(invoices);
+    
+  } catch (error) {
+    console.error('Error fetching and displaying filtered invoices:', error);
+    // Display error message to user
+    const invoicesTable = document.getElementById('facturas-body');
+    invoicesTable.innerHTML = ''; // Clear previous results
+    const row = invoicesTable.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 6;
+    cell.textContent = 'Error al cargar las facturas filtradas.';
+    cell.style.textAlign = 'center';
+    cell.style.color = 'crimson';
+  }
 })
+
 
 
 

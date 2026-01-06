@@ -225,6 +225,7 @@ app.post('/webhook', async (req, res) => {
     // 5. CONSTRUIR EL OBJETO DE DATOS FINAL Y GUARDAR EN SUPABASE
     console.log('Guardando datos en Supabase...');
     const recordsToInsert = invoiceLessons.map(lesson => ({
+      lesson_id: lesson.lessonId,
       client_name: clientData.name,
       client_email: clientData.email,
       service_name: lesson.lessonName,
@@ -237,7 +238,7 @@ app.post('/webhook', async (req, res) => {
 
     const { data: insertData, error: insertError } = await supabase
       .from('invoices')
-      .insert(recordsToInsert);
+      .upsert(recordsToInsert, { onConflict: 'lesson_id'});
 
     if (insertError) {
       console.error('Error guardando en Supabase:', insertError);
@@ -275,19 +276,59 @@ app.get('/api/last-processed-data', (req, res) =>{
 
 
 app.get('/api/invoices', async (req, res) => {
-  try {
-    const { data, error } = await supabase
+  // Extract dates from the URL query
+  const data = { startSearch, endSearch } = req.query
+  console.log('280 DATA:', data);
+
+
+  // Handle the query with no filter params
+  if (!startSearch && !endSearch) {
+
+    try {
+      const { data, error } = await supabase
       .from('invoices')
-      .select('*')
+      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time')
+      .order('booking_time', { ascending: false });
+      
+      if (error) {
+        throw error;
+      }
+      
+      res.status(200).json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch' });
+    }
+  // Handle the query with filter params  
+  } else {
+    console.log(`Mostrando reservas entre el ${startSearch} y el ${endSearch}`);
+    
+    // Adjust the dates to cover the full days
+    const startDate = `${startSearch}T00:00:00.000Z`;
+    const endDate = `${endSearch}T23:59:59.999Z`;
+
+    try {
+      // USe 'gte' & 'lte' methods from Supabase to filter the results on booking_time col
+      const { data, error } = await supabase
+      .from('invoices')
+      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time') 
+      .gte('booking_time', startDate)
+      .lte('booking_time', endDate)
       .order('booking_time', { ascending: false });
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        // If Supabase returns an error, we throw it to be caught by the catch block.
+        throw error;
+      }
 
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch' });
+
+      // If the query is successful, we send the filtered data back to the client.
+      console.log('320 - DATA:', data);
+      res.status(200).json(data);
+
+    } catch (error) {
+      console.error('Error fetching filtered invoices', error);
+      res.status(500).json({ error: 'Failed to fetch filtered invoces.'});
+    }
   }
 });
 
