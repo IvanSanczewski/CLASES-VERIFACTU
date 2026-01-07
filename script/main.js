@@ -25,21 +25,48 @@ async function fetchInvoices(startDateSearch, endDateSearch){
       throw error;    
     }
   // Asumimos que el usuario utiliza las dos fechas del filtro  
-  } else {
+  } else if (startDateSearch && endDateSearch){
     console.log('YES PARAMS');
- 
+    
     const searchParams = new URLSearchParams({
       startSearch: startDateSearch, 
       endSearch: endDateSearch
     });
-
+    
     const query = searchParams.toString(); 
     console.log(query);
     console.log(`${url}?${query}`);
-
+    
     try {
       const response = await fetch(`${url}?${query}`);
       console.log('FULL URL QUERY:', response);
+      if (!response.ok) {
+        throw new Error('HTTP error! Status:', response.status);
+      }
+      
+      return await response.json();
+      
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+    // User does not add start data > start data = 01 Jan 2026
+  } else if (!startDateSearch && endDateSearch){
+    console.log('NO START DATE');
+    
+    const searchParams = new URLSearchParams({
+      startSearch: '2026-01-01', 
+      endSearch: endDateSearch
+    });
+    
+    const query = searchParams.toString(); 
+    console.log(query);
+    console.log(`${url}?${query}`);
+    
+    try {
+      const response = await fetch (`${url}?${query}`);
+      console.log('FULL URL QUERY NO START DATE:', response);
+
       if (!response.ok) {
         throw new Error('HTTP error! Status:', response.status);
       }
@@ -50,17 +77,43 @@ async function fetchInvoices(startDateSearch, endDateSearch){
       console.error(error);
       throw error;
     }
+    
+    // User does not add end data > end data = new Date (today)
+  } else {
+    console.log('NO END DATE');
+    
+    const searchParams = new URLSearchParams({
+      startSearch: startDateSearch, 
+      endSearch: new Date().toISOString().slice(0, 10)
+    });
+    
+    const query = searchParams.toString(); 
+    console.log(query);
+    console.log(`${url}?${query}`);
+    
+    try {
+      const response = await fetch (`${url}?${query}`);
+      console.log('FULL URL QUERY NO END DATE:', response);
 
-  }
+      if (!response.ok) {
+        throw new Error('HTTP error! Status:', response.status);
+      }
+
+      return await response.json();
+
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  } 
 };
 
 // Print the invoices
 function displayInvoices(invoices){
-  // Grab the id where the invoices will be displayed
   const invoicesTable = document.getElementById('facturas-body');
   // Clear up the table to avoid duplicates
   invoicesTable.innerHTML = '';
-
+  
   // Check if the table is empty
   if (invoices.length === 0) {
     // Create a new row to display a message
@@ -74,7 +127,7 @@ function displayInvoices(invoices){
   
   invoices.forEach(invoice => {
     const row = invoicesTable.insertRow();
-
+    
     const cellBookingTime = row.insertCell();
     // Date formatting
     cellBookingTime.textContent = new Date(invoice.created_at).toLocaleString();
@@ -103,13 +156,13 @@ document.addEventListener('DOMContentLoaded', async() => {
     // Wait for the returned data from fetchInvoices
     const invoices = await fetchInvoices();
     // Sort the array starting from the newest booking
-    invoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // invoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     console.log('INVOICES:', invoices);
     displayInvoices(invoices);
     
   } catch (error) {
     // Create a new cell to display a possible error
-    const invoicesTable = document.getElementById('facturas-body');
+    // const invoicesTable = document.getElementById('facturas-body');
     const row = invoicesTable.insertRow();
     const cell = row.insertCell();
     cell.colSpan = 6;
@@ -120,16 +173,17 @@ document.addEventListener('DOMContentLoaded', async() => {
 });
 
 // Cuando el usuario hace click en Buscar el evento se dispara
-document.querySelector('.filters').addEventListener('submit', async (event)=>{ // Added async
+document.querySelector('.filters').addEventListener('submit', async (event)=>{ 
   event.preventDefault()
-
+  
   // Leémos los valores de las fechas para la búsqueda introducidas por el usuario
   const startSearch = document.querySelector('input[name="start"]').value;
   const endSearch = document.querySelector('input[name="end"]').value;
+  console.log('154 - START SEARCH: ', startSearch);
+  console.log('155 - END SEARCH: ', endSearch);
   
   try {
     const invoices = await fetchInvoices(startSearch, endSearch);
-    invoices.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Sort invoices
     console.log('FILTERED INVOICES:', invoices);
     displayInvoices(invoices);
     
@@ -145,8 +199,4 @@ document.querySelector('.filters').addEventListener('submit', async (event)=>{ /
     cell.style.textAlign = 'center';
     cell.style.color = 'crimson';
   }
-})
-
-
-
-
+});

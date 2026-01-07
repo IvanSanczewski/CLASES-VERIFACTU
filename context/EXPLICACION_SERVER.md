@@ -193,7 +193,6 @@ line from main.js. It's redundant.
 5.  The `catch` block
     If any error is thrown within the try block (either from our throw error line or from another unexpected failure), the catch block is executed. It does two things:
 
-    - console.error(...): It logs the detailed error to your server's console. This is crucial for you to see what went wrong during development.
     - res.status(500).json(...): It sends a generic "500 Internal Server Error" response to the browser. This prevents sensitive error details from being exposed to the end-user and tells main.js that the request failed.
 
 ### Last qstn in previous conversation

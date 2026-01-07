@@ -4,7 +4,7 @@
 2. [DONE] Update the server to connect to Supabase and save incoming webhook data.
 3. [DONE] Create a new API endpoint to fetch a list of all invoices.
 4. [DONE] Redesign the frontend to display the list of all invoices.
-5. [pending] Implement frontend controls and backend logic for filtering invoices by date.
+5. [DONE] Implement frontend controls and backend logic for filtering invoices by date.
 
 Do We Need a Service Layer?
 
@@ -53,4 +53,3 @@ A user interface with "Start Date" and "End Date" inputs and a "Filter" button. 
 
 ### `is fetchAndDisplayInvoices() fetching and displaying? shouldn't we separate it?`
 
-<span style="color:lightgreen ;">[PENDING]</span> Implement frontend controls and backend logic

@@ -280,15 +280,14 @@ app.get('/api/invoices', async (req, res) => {
   const data = { startSearch, endSearch } = req.query
   console.log('280 DATA:', data);
 
-
   // Handle the query with no filter params
   if (!startSearch && !endSearch) {
-
+    console.log('NO FILTER');
     try {
       const { data, error } = await supabase
       .from('invoices')
       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time')
-      .order('booking_time', { ascending: false });
+      .order('created_at', { ascending: false });
       
       if (error) {
         throw error;
@@ -311,18 +310,16 @@ app.get('/api/invoices', async (req, res) => {
       const { data, error } = await supabase
       .from('invoices')
       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time') 
-      .gte('booking_time', startDate)
-      .lte('booking_time', endDate)
-      .order('booking_time', { ascending: false });
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: false });
 
       if (error) {
         // If Supabase returns an error, we throw it to be caught by the catch block.
         throw error;
       }
 
-
       // If the query is successful, we send the filtered data back to the client.
-      console.log('320 - DATA:', data);
       res.status(200).json(data);
 
     } catch (error) {
