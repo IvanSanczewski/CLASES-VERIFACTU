@@ -1,5 +1,42 @@
 // HANDLES PAGE FUNCTIONALITIES
 
+// Fetch data from supabase using filters only when the User adds them
+// Each filter is holded inside an if block and can be added as many as filters are needed
+// If no date is added, a preset will be applied
+
+async function fetchInvoices(startDate, endDate) {
+  const url = '/api/invoices';
+  const params = new URLSearchParams();
+
+  // Check if startDate has been added
+  if (startDate) {
+    params.append('startSearch', startDate);
+  }
+  // Check if endDate has been added
+  if (endDate) {
+    params.append('endSearch', endDate);
+  } else if (startDate && !endDate){
+    params.append('endSearch', new Date().toISOString().slice(0,10));
+  } else if (!startDate && endDate){
+    params.append('startSearch', '2026-01-01');
+  };
+
+  const query = params.toString() ? `${url}?${params.toString()}` : url;
+
+  try {
+    const response = await fetch(query);
+    
+  } catch (error) {
+    
+  }
+}
+
+
+
+
+
+
+
 // Sends a request to the '/api/invoices' endpoint in server.js to retrieve all the invoices
 async function fetchInvoices(startDateSearch, endDateSearch){
   // Base url for API calls

@@ -221,3 +221,158 @@ Here is the new plan:
 This approach aligns with your goal of cleaning up the table and is a more robust, long-term solution.
 
 Let me know when you have added the booking_hash column, and I will proceed with the necessary code changes.
+
+---
+
+### Propuesta de Refactorización y Limpieza del Código
+
+Tras analizar el estado actual de la aplicación, se han identificado varias áreas donde el código puede ser mejorado, simplificado y limpiado. Aunque la aplicación es funcional, aplicar estos cambios mejorará su mantenibilidad, legibilidad y rendimiento.
+
+#### 1. Refactorización del Backend (`server.js`)
+
+**Objetivo:** Simplificar la lógica del endpoint `/api/invoices` y eliminar código obsoleto.
+
+Actualmente, la gestión de los parámetros de fecha (`startSearch`, `endSearch`) se realiza con una estructura `if/else` que duplica la lógica de la consulta a la base de datos. Podemos unificar esto en una sola consulta dinámica.
+
+**Lógica actual (Conceptual):**
+
+```javascript
+app.get('/api/invoices', async (req, res) => {
+  const { startSearch, endSearch } = req.query;
+
+  if (!startSearch && !endSearch) {
+    // Query sin filtros
+  } else {
+    // Query con filtros
+  }
+});
+```
+
+**Propuesta de refactorización:**
+
+Se puede construir la consulta a Supabase de forma condicional, añadiendo los filtros solo si los parámetros existen. Esto elimina la duplicación de código y hace la función más limpia.
+
+**Ejemplo de código refactorizado:**
+
+```javascript
+app.get('/api/invoices', async (req, res) => {
+  // 1. Extraer parámetros de forma más clara
+  const { startSearch, endSearch } = req.query;
+
+  try {
+    // 2. Iniciar la consulta base
+    let query = supabase
+      .from('invoices')
+      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time');
+
+    // 3. Añadir filtros solo si los parámetros existen
+    if (startSearch) {
+      query = query.gte('created_at', `${startSearch}T00:00:00.000Z`);
+    }
+    if (endSearch) {
+      query = query.lte('created_at', `${endSearch}T23:59:59.999Z`);
+    }
+
+    // 4. Añadir siempre el ordenamiento y ejecutar la consulta final
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    res.status(200).json(data);
+
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    res.status(500).json({ error: 'Failed to fetch invoices.' });
+  }
+});
+```
+
+**Ventajas:**
+- **DRY (Don't Repeat Yourself):** Se evita duplicar el `select` y `order`.
+- **Claridad:** La lógica es más fácil de seguir.
+- **Extensibilidad:** Añadir nuevos filtros opcionales en el futuro sería tan simple como añadir otro `if`.
+
+#### 2. Refactorización del Frontend (`script/main.js`)
+
+**Objetivo:** Simplificar la función `fetchInvoices` y corregir un `ReferenceError`.
+
+La función `fetchInvoices` tiene una estructura `if/else if/else` compleja para construir la URL. Esto puede simplificarse usando el objeto `URLSearchParams` de forma más directa.
+
+**Propuesta de refactorización:**
+
+```javascript
+async function fetchInvoices(startDate, endDate) {
+  const url = '/api/invoices';
+  const params = new URLSearchParams();
+
+  // Añadir parámetros solo si tienen valor
+  if (startDate) {
+    params.append('startSearch', startDate);
+  }
+  if (endDate) {
+    // Si no hay fecha de fin, usar la fecha de hoy
+    params.append('endSearch', endDate);
+  } else if (startDate && !endDate) {
+    params.append('endSearch', new Date().toISOString().slice(0, 10));
+  }
+
+  const query = params.toString();
+  const fullUrl = query ? `${url}?${query}` : url;
+
+  try {
+    const response = await fetch(fullUrl);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    throw error;
+  }
+}
+```
+
+**Corrección de Bug:**
+
+En el `DOMContentLoaded`, el `catch` para el `fetchInvoices()` inicial intenta acceder a `invoicesTable`, que no está definido en ese scope.
+
+**Código con error:**
+```javascript
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // ...
+  } catch (error) {
+    // 'invoicesTable' no está definido aquí
+    const row = invoicesTable.insertRow();
+    // ...
+  }
+});
+```
+
+**Solución:**
+Declarar `const invoicesTable = document.getElementById('facturas-body');` al inicio del script o dentro del bloque `catch`.
+
+```javascript
+document.addEventListener('DOMContentLoaded', async () => {
+  const invoicesTable = document.getElementById('facturas-body'); // Definir aquí
+  try {
+    const invoices = await fetchInvoices();
+    displayInvoices(invoices);
+  } catch (error) {
+    const row = invoicesTable.insertRow(); // Ahora funciona
+    // ...
+  }
+});
+```
+
+#### 3. Limpieza de Archivos No Utilizados
+
+- **`script/api.js`**: Este archivo no se utiliza en la aplicación y ha sido eliminado. Contenía placeholders de credenciales, lo que representa un riesgo de seguridad si se rellena y se sube accidentalmente a un repositorio.
+
+- **Comentario en `index.html`**: La línea `<!-- <script src="./script/api.js"></script> -->` debe ser eliminada para reflejar que el archivo ya no existe.
+
+#### 4. Limpieza de CSS (`styles.css`)
+
+- Las reglas `.lessons` y `.lessons > div` no se aplican a ningún elemento en el `index.html` actual. Parecen ser restos de una versión anterior del diseño. Se recomienda eliminarlas para mantener la hoja de estilos limpia y relevante.

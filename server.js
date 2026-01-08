@@ -21,8 +21,7 @@ const PORT = process.env.PORT || 3000;
 const SIMPLYBOOK_API_URL = 'https://user-api.simplybook.me';
 
 
-// Placeholder para las funciones que replicarán la lógica de Make.com
-// Estas funciones las implementaremos en los siguientes pasos.
+// Connect to SB.me to get the auth token 
 const getAuthToken = async () => {
   console.log('Obteniendo token de autenticación...');
 
@@ -60,6 +59,7 @@ const getAuthToken = async () => {
   }
 };
 
+// Retrieve data relative to the booking, using its id and the token
 const getBookingDetails = async (token, bookingId) => {
   console.log(`Obteniendo detalles para la reserva ID: ${bookingId}`);
   const { SIMPLYBOOK_COMPANY } = process.env;
@@ -95,6 +95,7 @@ const getBookingDetails = async (token, bookingId) => {
   }
 };
 
+// Retrieve data relative to the client, using its id and the token
 const getClientInfo = async (token, clientId) => {
   console.log(`Obteniendo información para el cliente ID: ${clientId}`);
   const { SIMPLYBOOK_COMPANY } = process.env;
@@ -247,12 +248,6 @@ app.post('/webhook', async (req, res) => {
       console.log('Datos guardados en Supabase con éxito!');
     }
     
-    // Guardamos los datos en la variable local para mantener la funcionalidad del endpoint /api/last-processed-data
-    lastProcessedData = {
-        client: clientData,
-        lessons: invoiceLessons
-    };
-
     console.log('--- PROCESO COMPLETADO ---');
 
     // Respondemos a SimplyBook.me que todo ha ido bien
@@ -266,71 +261,110 @@ app.post('/webhook', async (req, res) => {
 });
 
 
+//TODO: Can this be deleted?
 app.get('/api/last-processed-data', (req, res) =>{
   if (lastProcessedData){
     res.status(200).json(lastProcessedData);
   } else {
     res.status(400).json({ message: 'Aún no hay datos procesados disponibles.' });
   }
-})
+});
 
-
+// Fetch data from supabase using filters only when the User adds them
+// Each filter is holded inside an if block and can be added as many as filters are needed
+// If no date is added, a preset will be applied
 app.get('/api/invoices', async (req, res) => {
-  // Extract dates from the URL query
-  const data = { startSearch, endSearch } = req.query
-  console.log('280 DATA:', data);
+  const { startSearch, endSearch } = req.query;
 
-  // Handle the query with no filter params
-  if (!startSearch && !endSearch) {
-    console.log('NO FILTER');
-    try {
-      const { data, error } = await supabase
+  try {
+    // We will use a base query to supabase, the one without filters
+    let query = supabase
       .from('invoices')
-      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time')
-      .order('created_at', { ascending: false });
-      
-      if (error) {
-        throw error;
-      }
-      
-      res.status(200).json(data);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch' });
+      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time');
+
+    // Add the used filters usinf if blocks
+    if (startSearch) {
+      query = query
+        .gte('created_at', `${startSearch}T00:00:00.000Z`);
     }
-  // Handle the query with filter params  
-  } else {
-    console.log(`Mostrando reservas entre el ${startSearch} y el ${endSearch}`);
     
-    // Adjust the dates to cover the full days
-    const startDate = `${startSearch}T00:00:00.000Z`;
-    const endDate = `${endSearch}T23:59:59.999Z`;
-
-    try {
-      // USe 'gte' & 'lte' methods from Supabase to filter the results on booking_time col
-      const { data, error } = await supabase
-      .from('invoices')
-      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time') 
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
-      .order('created_at', { ascending: false });
-
-      if (error) {
-        // If Supabase returns an error, we throw it to be caught by the catch block.
-        throw error;
-      }
-
-      // If the query is successful, we send the filtered data back to the client.
-      res.status(200).json(data);
-
-    } catch (error) {
-      console.error('Error fetching filtered invoices', error);
-      res.status(500).json({ error: 'Failed to fetch filtered invoces.'});
+    if (endSearch) {
+      query = query
+        .lte('created_at', `${endSearch}T23:59:59.999Z`);
     }
+    
+    // Make the query request with .order() to sort the promise
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    // Reply to supabase with a 200 status and parse the respnse
+    res.status(200).json(data);
+
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    res.status(500).json({ error: 'Failed to fetch invoices.' })
   }
 });
 
+// app.get('/api/invoices', async (req, res) => {
+//   // Extract dates from the URL query
+//   // const data = { startSearch, endSearch } = req.query
+//   const { startSearch, endSearch } = req.query
 
-// Iniciar el servidor
+//   // Handle the query with no filter params
+//   if (!startSearch && !endSearch) {
+//     console.log('NO FILTER');
+//     try {
+//       const { data, error } = await supabase
+//       .from('invoices')
+//       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time')
+//       .order('created_at', { ascending: false });
+      
+//       if (error) {
+//         throw error;
+//       }
+      
+//       res.status(200).json(data);
+//     } catch (error) {
+//       res.status(500).json({ error: 'Failed to fetch' });
+//     }
+//   // Handle the query with filter params  
+//   } else {
+//     console.log(`Mostrando reservas entre el ${startSearch} y el ${endSearch}`);
+    
+//     // Adjust the dates to cover the full days
+//     const startDate = `${startSearch}T00:00:00.000Z`;
+//     const endDate = `${endSearch}T23:59:59.999Z`;
+
+//     try {
+//       // USe 'gte' & 'lte' methods from Supabase to filter the results on booking_time col
+//       const { data, error } = await supabase
+//       .from('invoices')
+//       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time') 
+//       .gte('created_at', startDate)
+//       .lte('created_at', endDate)
+//       .order('created_at', { ascending: false });
+
+//       if (error) {
+//         throw error;
+//       }
+
+//       // If the query is successful, we send the filtered data back to the client
+//       res.status(200).json(data);
+
+//     } catch (error) {
+//       console.error('Error fetching filtered invoices', error);
+//       res.status(500).json({ error: 'Failed to fetch filtered invoces.'});
+//     }
+//   }
+// });
+
+
+// Start the server
+//TODO: Will this be needed once the app is served from a VPS?
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
   console.log(`Esperando peticiones de webhook en http://localhost:${PORT}/webhook`);
