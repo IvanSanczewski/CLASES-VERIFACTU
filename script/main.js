@@ -1,149 +1,47 @@
 // HANDLES PAGE FUNCTIONALITIES
 
 // Fetch data from supabase using filters only when the User adds them
-// Each filter is holded inside an if block and can be added as many as filters are needed
 // If no date is added, a preset will be applied
 
 async function fetchInvoices(startDate, endDate) {
   const url = '/api/invoices';
   const params = new URLSearchParams();
 
-  // Check if startDate has been added
+  // Si solo se provee fecha de inicio, se busca hasta el día de hoy.
+  if (startDate && !endDate) {
+    endDate = new Date().toISOString().slice(0, 10);
+  }
+
+  // Si solo se provee fecha de fin, se busca desde el inicio del año actual.
+  if (!startDate && endDate) {
+    const year = new Date(endDate).getFullYear();
+    startDate = `${year}-01-01`;
+  }
+
   if (startDate) {
     params.append('startSearch', startDate);
   }
-  // Check if endDate has been added
+
   if (endDate) {
     params.append('endSearch', endDate);
-  } else if (startDate && !endDate){
-    params.append('endSearch', new Date().toISOString().slice(0,10));
-  } else if (!startDate && endDate){
-    params.append('startSearch', '2026-01-01');
-  };
+  }
 
   const query = params.toString() ? `${url}?${params.toString()}` : url;
+  console.log('25 - QUERY URL:', query);
 
   try {
     const response = await fetch(query);
+    if(!response.ok){
+      throw new Error (`HTTP error! Status: ${response.status}`);
+    }
+
+    return await response.json();
     
   } catch (error) {
-    
+    console.error('Error fetching invoices: ', error);
+    throw error;
   }
 }
-
-
-
-
-
-
-
-// Sends a request to the '/api/invoices' endpoint in server.js to retrieve all the invoices
-async function fetchInvoices(startDateSearch, endDateSearch){
-  // Base url for API calls
-  let url = '/api/invoices';
-
-  // Checks if the the filter has been used
-  // Fired when no filter is used, at launch
-  if (!startDateSearch && !endDateSearch) {
-    console.log('NO PARAMS');
-    try {
-      const response = await fetch(url);
-      
-      // Check for a posible 400 or 500 error
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
-      
-      // Return the response parsed into a JSON
-      return await response.json();
-      
-    } catch (error) {
-      console.error('Error al capturar las facturas en el servidor.', error);
-      throw error;    
-    }
-  // Asumimos que el usuario utiliza las dos fechas del filtro  
-  } else if (startDateSearch && endDateSearch){
-    console.log('YES PARAMS');
-    
-    const searchParams = new URLSearchParams({
-      startSearch: startDateSearch, 
-      endSearch: endDateSearch
-    });
-    
-    const query = searchParams.toString(); 
-    console.log(query);
-    console.log(`${url}?${query}`);
-    
-    try {
-      const response = await fetch(`${url}?${query}`);
-      console.log('FULL URL QUERY:', response);
-      if (!response.ok) {
-        throw new Error('HTTP error! Status:', response.status);
-      }
-      
-      return await response.json();
-      
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-    // User does not add start data > start data = 01 Jan 2026
-  } else if (!startDateSearch && endDateSearch){
-    console.log('NO START DATE');
-    
-    const searchParams = new URLSearchParams({
-      startSearch: '2026-01-01', 
-      endSearch: endDateSearch
-    });
-    
-    const query = searchParams.toString(); 
-    console.log(query);
-    console.log(`${url}?${query}`);
-    
-    try {
-      const response = await fetch (`${url}?${query}`);
-      console.log('FULL URL QUERY NO START DATE:', response);
-
-      if (!response.ok) {
-        throw new Error('HTTP error! Status:', response.status);
-      }
-
-      return await response.json();
-
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-    
-    // User does not add end data > end data = new Date (today)
-  } else {
-    console.log('NO END DATE');
-    
-    const searchParams = new URLSearchParams({
-      startSearch: startDateSearch, 
-      endSearch: new Date().toISOString().slice(0, 10)
-    });
-    
-    const query = searchParams.toString(); 
-    console.log(query);
-    console.log(`${url}?${query}`);
-    
-    try {
-      const response = await fetch (`${url}?${query}`);
-      console.log('FULL URL QUERY NO END DATE:', response);
-
-      if (!response.ok) {
-        throw new Error('HTTP error! Status:', response.status);
-      }
-
-      return await response.json();
-
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  } 
-};
 
 // Print the invoices
 function displayInvoices(invoices){

@@ -309,59 +309,6 @@ app.get('/api/invoices', async (req, res) => {
   }
 });
 
-// app.get('/api/invoices', async (req, res) => {
-//   // Extract dates from the URL query
-//   // const data = { startSearch, endSearch } = req.query
-//   const { startSearch, endSearch } = req.query
-
-//   // Handle the query with no filter params
-//   if (!startSearch && !endSearch) {
-//     console.log('NO FILTER');
-//     try {
-//       const { data, error } = await supabase
-//       .from('invoices')
-//       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time')
-//       .order('created_at', { ascending: false });
-      
-//       if (error) {
-//         throw error;
-//       }
-      
-//       res.status(200).json(data);
-//     } catch (error) {
-//       res.status(500).json({ error: 'Failed to fetch' });
-//     }
-//   // Handle the query with filter params  
-//   } else {
-//     console.log(`Mostrando reservas entre el ${startSearch} y el ${endSearch}`);
-    
-//     // Adjust the dates to cover the full days
-//     const startDate = `${startSearch}T00:00:00.000Z`;
-//     const endDate = `${endSearch}T23:59:59.999Z`;
-
-//     try {
-//       // USe 'gte' & 'lte' methods from Supabase to filter the results on booking_time col
-//       const { data, error } = await supabase
-//       .from('invoices')
-//       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time') 
-//       .gte('created_at', startDate)
-//       .lte('created_at', endDate)
-//       .order('created_at', { ascending: false });
-
-//       if (error) {
-//         throw error;
-//       }
-
-//       // If the query is successful, we send the filtered data back to the client
-//       res.status(200).json(data);
-
-//     } catch (error) {
-//       console.error('Error fetching filtered invoices', error);
-//       res.status(500).json({ error: 'Failed to fetch filtered invoces.'});
-//     }
-//   }
-// });
-
 
 // Start the server
 //TODO: Will this be needed once the app is served from a VPS?

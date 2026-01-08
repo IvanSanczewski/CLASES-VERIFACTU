@@ -263,7 +263,9 @@ app.get('/api/invoices', async (req, res) => {
     // 2. Iniciar la consulta base
     let query = supabase
       .from('invoices')
-      .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time');
+      .select(
+        'id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time'
+      );
 
     // 3. Añadir filtros solo si los parámetros existen
     if (startSearch) {
@@ -274,14 +276,15 @@ app.get('/api/invoices', async (req, res) => {
     }
 
     // 4. Añadir siempre el ordenamiento y ejecutar la consulta final
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('created_at', {
+      ascending: false,
+    });
 
     if (error) {
       throw error;
     }
 
     res.status(200).json(data);
-
   } catch (error) {
     console.error('Error fetching invoices:', error);
     res.status(500).json({ error: 'Failed to fetch invoices.' });
@@ -290,6 +293,7 @@ app.get('/api/invoices', async (req, res) => {
 ```
 
 **Ventajas:**
+
 - **DRY (Don't Repeat Yourself):** Se evita duplicar el `select` y `order`.
 - **Claridad:** La lógica es más fácil de seguir.
 - **Extensibilidad:** Añadir nuevos filtros opcionales en el futuro sería tan simple como añadir otro `if`.
@@ -312,8 +316,8 @@ async function fetchInvoices(startDate, endDate) {
     params.append('startSearch', startDate);
   }
   if (endDate) {
-    // Si no hay fecha de fin, usar la fecha de hoy
     params.append('endSearch', endDate);
+    // Si no hay fecha de fin, usar la fecha de hoy
   } else if (startDate && !endDate) {
     params.append('endSearch', new Date().toISOString().slice(0, 10));
   }
@@ -339,6 +343,7 @@ async function fetchInvoices(startDate, endDate) {
 En el `DOMContentLoaded`, el `catch` para el `fetchInvoices()` inicial intenta acceder a `invoicesTable`, que no está definido en ese scope.
 
 **Código con error:**
+
 ```javascript
 document.addEventListener('DOMContentLoaded', async () => {
   try {
