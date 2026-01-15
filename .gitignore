@@ -1,6 +1,7 @@
 # DEPENDENCIES
 node_modules/
 
+
 # ENVIRONMENT VARIABLES
 .env
 .env.example
@@ -12,3 +13,8 @@ node_modules/
 
 # NGROK
 ngrok.exe
+
+
+# CONTEXT & EXPLANATION FILES
+context/
+integracion_verifactu/
