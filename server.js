@@ -175,6 +175,10 @@ app.post('/webhook/invoice', async (req, res) => {
     }
 
     console.log('Datos de factura guardados en Supabase con éxito!');
+
+    // Simulate sending invoice to Invocash
+    sendToInvocash(recordToInsert);
+    
     res.status(200).json({ status: 'success', message: 'Webhook de factura recibido y procesado con éxito' });
 
   } catch (error) {
@@ -182,6 +186,67 @@ app.post('/webhook/invoice', async (req, res) => {
     res.status(500).json({ status: 'error', message: 'Ocurrió un error en el servidor' });
   }
 });
+
+
+// Maps the internal invoice data to the structure expected by Invocash API
+async function mapDataForInvocash(invoiceData) {
+  console.log('Maping data to match Invocash requested data structure...');
+
+  //TODO: BASED ON THE SWAGGER
+  const mappedData = {
+    lines: [{
+      product_id: null, // Not available in our data, sending null as per example
+      description: invoiceData.service_name,
+      quantity: 1,
+      unit_price: parseFloat(invoiceData.tax_base),
+      tax_base: parseFloat(invoiceData.tax_base),
+      tax_pctge: 21.00,
+      tax_amount: parseFloat(invoiceData.tax_amount),
+      // tax_withholding_amount: 0, // Default
+      tax_withholding_pctge: 0, // Default
+      tax_withholding_amount: 0, // Default
+      tax_type: 'IVA',
+      clave_regimen: '01', // Default
+      qualification_operation: 'S1', // Default
+      exempt_operation: null, // Default
+      total: parseFloat(invoiceData.tax_base) + parseFloat(invoiceData.tax_amount)
+    }],
+
+    // Root level total
+    total: parseFloat(invoiceData.amount)
+  };
+
+  return mappedData;
+}
+
+
+
+
+async function sendToInvocash(invoiceData) {
+  console.log('--- Preparing data to send to Invocash ---');
+  
+  // Map the data to match the Invocash API structure
+  const invocashPayload = await mapDataForInvocash(invoiceData);
+  
+  // Log data before the API details are obtained
+  console.log('Mapped payload for Invocash:', JSON.stringify(invocashPayload, null, 2));
+
+
+  //TODO: Implement once we have the API details from invocash
+  // const invocashApiUrl = 'URL_API_INVOCASH';
+  // const invocashApiKey = process.env.INVOCASH_API_KEY;
+
+  // try {
+  //   const response = await axios.post(invocashApiUrl, invocashPayload, {
+  //     headers: { 'Authorization': `Bearer ${invocashApiKey}` }
+  //   });
+  //   console.log('Invoice sent to Invocash successfully!', response.data);
+  //   //TODO: Update the Supabase record with the Invocash ID or status   
+  // } catch (error) {
+  //   console.error('Error sending invoice to Invocash:', error.message);
+  // }
+}
+
 
 // --- El Webhook ---
 // Esta es la URL que recibirá los datos de SimplyBook.me
@@ -312,15 +377,6 @@ app.post('/webhook', async (req, res) => {
 });
 
 
-//TODO: Can this be deleted?
-app.get('/api/last-processed-data', (req, res) =>{
-  if (lastProcessedData){
-    res.status(200).json(lastProcessedData);
-  } else {
-    res.status(400).json({ message: 'Aún no hay datos procesados disponibles.' });
-  }
-});
-
 // Fetch data from supabase using filters only when the User adds them
 // Each filter is holded inside an if block and can be added as many as filters are needed
 // If no date is added, a preset will be applied
@@ -328,12 +384,12 @@ app.get('/api/invoices', async (req, res) => {
   const { startSearch, endSearch } = req.query;
 
   try {
+
     // We will use a base query to supabase, the one without filters
     let query = supabase
       .from('invoices')
       .select('id, created_at, lesson_id, client_name, client_email, service_name, amount, booking_time');
-
-    // Add the used filters usinf if blocks
+    // Add the used filters in if blocks
     if (startSearch) {
       query = query
         .gte('created_at', `${startSearch}T00:00:00.000Z`);
