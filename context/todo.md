@@ -53,6 +53,161 @@ User API guide: `https://simplybook.me/en/api/developer-api/tab/guide_api`
 API Documentation: `https://simplybook.me/en/api/developer-api/tab/doc_api?_gl=1*1wpcobx*_up*MQ..*_ga*NTc3MDkwNzM1LjE3Njg0MTgxNDA.*_ga_DF4Z49WJND*czE3Njg0MTgxMzkkbzEkZzEkdDE3Njg0MTgxNDgkajUxJGwwJGg0NjEzNTc5Njk.`
 REST API: `https://simplybook.me/en/api/developer-api/tab/rest_api?_gl=1*1wlrjr0*_up*MQ..*_ga*NTc3MDkwNzM1LjE3Njg0MTgxNDA.*_ga_DF4Z49WJND*czE3Njg0MTgxMzkkbzEkZzEkdDE3Njg0MTgxNTgkajQxJGwwJGg0NjEzNTc5Njk.`
 
+1. Analyze the SBPay.me "Invoice Created" Webhook: I will examine the SimplyBook.me API documentation to determine the data structure and fields provided by the SBPay.me webhook that is triggered when an invoice is generated.
+
+2. Create a New `/webhook/invoice` Endpoint: I will add a new POST route to server.js specifically for handling incoming invoice webhooks from SBPay.me.
+
+**Add curl command below**
+
+**Note for Windows PowerShell users:** The standard `curl` command is an alias for `Invoke-WebRequest`, which uses different syntax. Please use the `Invoke-WebRequest` command below. If you have the full `curl.exe` program installed (e.g., from Git Bash), you can use that instead with the original syntax.
+
+**PowerShell Command:**
+
+```powershell
+Invoke-WebRequest -Uri https://untextual-danial-unsliced.ngrok-free.dev/webhook/invoice -Method POST -ContentType "application/json" -Body '{
+    "event": "invoice_created",
+    "invoice_id": "INV-2026-001",
+    "invoice_number": "001",
+    "client": {
+        "id": "CLIENT-001",
+        "name": "John Doe",
+        "email": "john.doe@example.com",
+        "phone": "123-456-7890",
+        "address": "123 Main St",
+        "tax_id": "X12345678"
+    },
+    "items": [
+        {
+            "item_id": "ITEM-001",
+            "description": "Consultation",
+            "quantity": 1,
+            "unit_price": 100.00,
+            "total_price": 100.00
+        }
+    ],
+    "currency": "EUR",
+    "total_amount": 121.00,
+    "tax_amount": 21.00,
+    "total_base_amount": 100.00,
+    "status": "paid",
+    "created_at": "2026-01-15T10:00:00Z"
+}'
+```
+
+Cuerpo de la petición de factura: {
+event: 'invoice_created',
+invoice_id: 'INV-2026-001',
+invoice_number: '001',
+client: {
+id: 'CLIENT-001',
+name: 'John Doe',
+email: 'john.doe@example.com',
+phone: '123-456-7890',
+address: '123 Main St',
+tax_id: 'X12345678'
+},
+items: [
+{
+{
+item_id: 'ITEM-001',
+description: 'Consultation',
+quantity: 1,
+unit_price: 100,
+total_price: 100
+}
+],
+currency: 'EUR',
+total_amount: 121,
+tax_amount: 21,
+total_base_amount: 100,
+status: 'paid',
+created_at: '2026-01-15T10:00:00Z'
+}
+
+3. Adapt Data Processing for Invoices: The existing logic, which currently processes booking data, will be modified to handle the new invoice data structure. This includes extracting client details, service information, and financial amounts directly from the invoice webhook payload.
+
+4. Adjust Supabase Integration: I will update the code responsible for saving data to your Supabase 'invoices' table, ensuring the fields from the new invoice webhook are correctly mapped to the appropriate columns.
+
+Now, let's transition the webhook. Your context/todo.md implies we should only process SBPay.me invoices. Therefore, I propose Option 1: Deprecating the old booking webhook (`/webhook`) and fully transitioning to the new invoice webhook (/webhook/invoice).
+
+My plan is:
+
+1.  Modify the old `/webhook` endpoint in `server.js`: I'll change it to log a warning for old
+    booking webhooks, signaling they should be disabled in SimplyBook.me.
+2.  Guide you to update SimplyBook.me settings: I'll provide instructions to disable the booking
+    event webhook entirely, which aligns with your goal of only processing invoices.
+
+Do you agree with deprecating the old booking webhook?
+
+5. Reconfigure the Webhook in SimplyBook.me: You will need to update your SimplyBook.me settings to use the new /webhook/invoice endpoint and set the trigger to the "Invoice Created" event in SBPay.me.
+
+6. Test the New Endpoint: I will simulate a webhook request to the new endpoint to confirm that it correctly processes the data and saves it to the database.
+
+### LAST CONVERSATION
+
+1.  La URL del endpoint de la API de Invocash para crear facturas.
+2.  Tu API Key de Invocash para autenticar las peticiones.
+
+He encontrado esta URL de la documentación que vimos antes: https://ivansanceviciustest.invo.cash/api/documentation#/. Revisándola,
+parece que el endpoint para crear una factura es un POST a /api/v1/invoices. ¿Me lo puedes confirmar?
+
+Y lo más importante, ¿cuál es tu API Key de Invocash?
+
+Nota de seguridad: La manejaremos de forma segura utilizando variables de entorno para no dejarla expuesta en el código.
+
+Una vez que me des esa información, este será el plan:
+
+1.  Modificar `server.js`:
+    - Crear una función sendToInvocash(invoice) que tome los datos de una factura.
+    - Dentro de esa función, construir y enviar la petición POST a la API de Invocash con los datos mapeados correctamente.
+    - Actualizar la fila correspondiente en la tabla invoices de Supabase con el invocash_invoice_id y el nuevo verifactu_status que
+      nos devuelva Invocash.
+2.  Actualizar el Webhook:
+    - Llamar a nuestra nueva función sendToInvocash() justo después de guardar una nueva factura en la base de datos.
+3.  Actualizar el Frontend:
+    - Añadir una columna a la tabla en index.html para mostrar el verifactu_status de cada factura.
+
+✦ Gracias por la URL. He analizado la documentación de app.verifactuapi.es y la información es muy reveladora.
+
+Mis Hallazgos
+
+Esta API parece ser un servicio más genérico y directo para la validación VeriFactu, no necesariamente atado a la marca "Invocash"
+(aunque podrían ser los operadores o usar esta misma plataforma).
+
+- Endpoint: El endpoint para crear una factura es POST /api/alta-registro-facturacion.
+- Autenticación: Usa un token de autenticación (Bearer Token) que se obtiene haciendo login.
+- Datos Requeridos: Aquí está el punto clave. La API exige datos muy específicos y estructurados que son obligatorios para la
+  normativa española. En particular, requiere un campo IDEmisorFactura que debe ser el NIF del emisor.
+
+  Utilice nuestro API desarrollador para crear su propia interfaz de reserva. Usted puede diseñar cualquier solución que desee que varía de tu currículum de aplicación multifuncional con funcionalidad personalizada de acuerdo a sus necesidades específicas de negocio.
+
+### API info en simplybook.me
+
+Lea la a nuestra API para desarrolladores para obtener la breve información acerca de cómo usar el Simplybook API. También ver una lista completa de métodos permitidos en
+
+Su clave de API:
+5**_1
+Su clave de API secreto:
+4_**6
+JSON RPC API Endpoint: https://user-api.simplybook.it/
+
+REST API Endpoint: https://user-api-v2.simplybook.it/
+
+Activador para crear
+Activador para cambiar
+Activador para cancelar
+Activador para recordar
+Número de reintentos de la API (máximo 6)
+
+0
+URL de devolución de llamada
+https://untextual-danial-unsliced.ngrok-free.dev/webhook
+Los datos de devolución de llamada se presentarán en los datos de publicación sin procesar en formato JSON. Los siguientes campos están disponibles:
+booking_id - Identificación de reserva
+booking_hash - Resumen criptográfico de la reserva
+company - Inicio de sesión de su empresa
+notification_type - Tipo de notificación. Puede ser 'crear', 'cancelar', 'notificar', 'cambiar'
+
 ## NOT RELEVANT FOR THE MOMENT, IGNORE EVERYTHING BELOW THIS LINE
 
 ### STEP 7: Prepare Supabase for Invocash VeriFactu Integration
